@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
 
@@ -27,8 +26,9 @@ def recommend_hashtags(request: ContentRequest):
     return {"hashtags": ["#AI", "#Automation", "#Workflows"]}
 
 @app.post("/finalize-content")
-def finalize_content(request: ContentRequest):
-    final_text = f"{request.content}
+def finalize_content(req: ContentRequest):
+    final_output = f"{req.content}\n\n{' '.join(req.hashtags)}"
+    return {"final_content": final_output}
 
 {' '.join(request.hashtags)}"
     return {"final_content": final_text}
