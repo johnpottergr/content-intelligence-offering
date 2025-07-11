@@ -27,7 +27,8 @@ def recommend_hashtags(request: ContentRequest):
 
 @app.post("/finalize-content")
 def finalize_content(req: ContentRequest):
-    final_output = f"{req.content}\n\n{' '.join(req.hashtags)}"
+    hashtags_text = " ".join(req.hashtags)
+    final_output = f"{req.content}\n\n{hashtags_text}"
     return {"final_content": final_output}
 
 {' '.join(request.hashtags)}"
