@@ -1,5 +1,6 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from pydantic import BaseModel
+from typing import List
 
 app = FastAPI()
 
@@ -13,9 +14,11 @@ class ContentRequest(BaseModel):
 def analyze_viral(request: ContentRequest):
     return {"trends": ["AI automation", "workflow optimization"], "content_gaps": ["automation workflows"]}
 
-@app.post("/extract-embeddings")
-def extract_embeddings(request: ContentRequest):
-    return {"semantic_gaps": ["workflow timing", "low-code platforms"]}
+@app.post("/finalize-content")
+def finalize_content(req: ContentRequest):
+    hashtags_text = " ".join(req.hashtags)
+    final_output = f"{req.content}\n\n{hashtags_text}"
+    return {"final_content": final_output}
 
 @app.post("/optimize-structure")
 def optimize_structure(request: ContentRequest):
@@ -30,6 +33,6 @@ def finalize_content(req: ContentRequest):
     hashtags_text = " ".join(req.hashtags)
     final_output = f"{req.content}\n\n{hashtags_text}"
     return {"final_content": final_output}
-
+    
 {' '.join(request.hashtags)}"
     return {"final_content": final_text}
