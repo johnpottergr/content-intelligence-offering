@@ -107,22 +107,26 @@ def post_reply(post_id, content, access_token="YOUR_X_ACCESS_TOKEN"):
 
 # Main Execution
 def main():
-    input_data = json.loads(sys.stdin.read())
-    action = input_data.get("action", "scrape_analyze")
-    urls = input_data.get("urls", [])
-    my_content = input_data.get("my_content", "")
-    n_clusters = input_data.get("n_clusters", 3)
-    prompt = input_data.get("prompt", "")
-    post_id = input_data.get("post_id", "")
-    content = input_data.get("content", "")
+    try:
+        input_data = json.loads(sys.stdin.read())
+        action = input_data.get("action", "scrape_analyze")
+        urls = input_data.get("urls", [])
+        my_content = input_data.get("my_content", "")
+        n_clusters = input_data.get("n_clusters", 3)
+        prompt = input_data.get("prompt", "")
+        post_id = input_data.get("post_id", "")
+        content = input_data.get("content", "")
 
-    if action == "scrape_analyze":
-        return scrape_analyze(urls, my_content, n_clusters)
-    elif action == "generate_content":
-        return generate_content(prompt)
-    elif action == "post_reply":
-        return post_reply(post_id, content)
-    return json.dumps({"error": "Invalid action"})
+        if action == "scrape_analyze":
+            return scrape_analyze(urls, my_content, n_clusters)
+        elif action == "generate_content":
+            return generate_content(prompt)
+        elif action == "post_reply":
+            return post_reply(post_id, content)
+        else:
+            return json.dumps({"error": "Invalid action"})
+    except Exception as e:
+        return json.dumps({"error": str(e)})
 
 if __name__ == "__main__":
     print(main())
