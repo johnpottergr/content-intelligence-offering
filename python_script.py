@@ -37,7 +37,6 @@ def cluster_embeddings(embeddings, n_clusters):
     labels = kmeans.fit_predict(embeddings)
     return labels, kmeans.cluster_centers_
 
-# Removed find_optimal_clusters since it relied on matplotlib; using dynamic n_clusters instead
 def compute_similarity(embedding1, embedding2):
     return cosine_similarity([embedding1], [embedding2])[0][0]
 
@@ -70,3 +69,51 @@ def generate_content(prompt, api_url="http://localhost:11434/api/generate"):
     try:
         response = requests.post(
             api_url,
+            json={"model": "deepseek", "prompt": prompt},
+            headers={"Content-Type": "application/json"}
+        )
+        response.raise_for_status()
+        return json.dumps({"thread": response.json().get("response", "Generated content")})
+    except Exception as e:
+        return json.dumps({"error": f"LLM generation failed: {e}"})
+
+def post_reply(post_id, content, access_token="YOUR_X_ACCESS_TOKEN"):
+    try:
+        response = requests.post(
+            "https://api.x.com/2/tweets",
+            json={"reply": {"in_reply_to_tweet_id": post_id, "text": content}},
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            }
+        )
+        response.raise_for_status()
+        return json.dumps({"status": "posted"})
+    except Exception as e:
+        return json.dumps({"error": f"Post failed: {e}"})
+
+# Main Execution
+def main():
+    try:
+        input_data = json.loads(sys.stdin.read())
+        action = input_data.get("action", "scrape_analyze")
+        urls = input_data.get("urls", [])
+        my_content = input_data.get("my_content", "")
+        n_clusters = input_data.get("n_clusters", 3)
+        prompt = input_data.get("prompt", "")
+        post_id = input_data.get("post_id", "")
+        content = input_data.get("content", "")
+
+        if action == "scrape_analyze":
+            return scrape_analyze(urls, my_content, n_clusters)
+        elif action == "generate_content":
+            return generate_content(prompt)
+        elif action == "post_reply":
+            return post_reply(post_id, content)
+        else:
+            return json.dumps({"error": "Invalid action"})
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+if __name__ == "__main__":
+    print(main())
