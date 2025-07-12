@@ -14,12 +14,6 @@ class ContentRequest(BaseModel):
 def analyze_viral(request: ContentRequest):
     return {"trends": ["AI automation", "workflow optimization"], "content_gaps": ["automation workflows"]}
 
-@app.post("/finalize-content")
-def finalize_content(req: ContentRequest):
-    hashtags_text = " ".join(req.hashtags)
-    final_output = f"{req.content}\n\n{hashtags_text}"
-    return {"final_content": final_output}
-
 @app.post("/optimize-structure")
 def optimize_structure(request: ContentRequest):
     return {"optimized_content": request.content + " Include trends: " + ", ".join(["AI automation workflows"])}
@@ -33,6 +27,3 @@ def finalize_content(req: ContentRequest):
     hashtags_text = " ".join(req.hashtags)
     final_output = f"{req.content}\n\n{hashtags_text}"
     return {"final_content": final_output}
-    
-{' '.join(request.hashtags)}"
-    return {"final_content": final_text}
