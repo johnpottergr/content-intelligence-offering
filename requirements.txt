@@ -1,9 +1,6 @@
 fastapi
 uvicorn
-keybert
 sentence-transformers
-beautifulsoup4
-requests
 scikit-learn
 numpy
-urllib3<2
+requests
