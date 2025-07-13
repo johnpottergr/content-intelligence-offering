@@ -4,6 +4,7 @@ from typing import List
 import subprocess
 import json
 import os
+from openai import OpenAI
 
 app = FastAPI()
 
@@ -36,18 +37,36 @@ def analyze_viral(request: ContentRequest):
         "content_gaps": [f"Cluster {c}" for c in set(request.clusters) if c != 0]
     }
 
+
 @app.post("/optimize-structure")
 def optimize_structure(request: ContentRequest):
-    prompt = f"Optimize {request.content} with trends {', '.join(map(str, request.clusters))} and insights {request.insights}"
-    input_data = {"action": "generate_content", "prompt": prompt}
-    result = subprocess.run(
-        ["python3", "python_script.py"],
-        input=json.dumps(input_data),
-        text=True,
-        capture_output=True
+    # Get trends and gaps from analyze-viral (assuming called first)
+    trends = request.viral_content.split(", ") if request.viral_content else []
+    gaps = [f"Cluster {c}" for c in request.clusters if c != 0]
+    
+    # Craft prompt using trends and gaps
+    prompt = f"Optimize the following content: {request.content}. Use these trends: {', '.join(trends)}. Address these content gaps: {', '.join(gaps)}. Provide a 500-word response suitable for a LinkedIn post."
+    
+    # Initialize DeepSeek client with API key from environment
+    client = OpenAI(
+        api_key=os.getenv("DEEPSEEK_API_KEY", "your_deepseek_api_key_here"),
+        base_url="https://api.deepseek.com"
     )
-    optimized = json.loads(result.stdout).get("thread", request.content) if result.returncode == 0 else request.content
+    
+    # Call DeepSeek API
+    try:
+        response = client.chat.completions.create(
+            model="deepseek-chat",  # Using DeepSeek-V3-0324
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1000,  # Approx 500 words
+            temperature=1.3   # General conversation setting
+        )
+        optimized = response.choices[0].message.content.strip()
+    except Exception as e:
+        optimized = f"Error generating content: {str(e)}"  # Fallback if API fails
+    
     return {"optimized_content": optimized}
+
 
 @app.post("/recommend-hashtags")
 def recommend_hashtags(request: ContentRequest):
