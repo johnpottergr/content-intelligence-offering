@@ -7,6 +7,8 @@ services:
   envVars:
     - key: CONTENTSTUDIO_API_KEY
       value: your_api_key_here  # Set in Render dashboard
+    - key: DEEPSEEK_API_KEY
+      value: sk-5f2eb01e79a64057826cd27e01e74e0b  # Your DeepSeek API key
     - key: PORT
       value: 10000
   disk:
