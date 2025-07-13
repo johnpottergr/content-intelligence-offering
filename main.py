@@ -9,18 +9,18 @@ app = FastAPI()
 
 class ContentRequest(BaseModel):
     content: str
-    viral_content: str = ""
+    viral_content: str = ""  # Will use ContentStudio trends
     insights: str = ""
     hashtags: list[str] = []
-    clusters: list[int] = []  # New field for n8n output
-    similarities: list[float] = []  # New field for n8n output
+    clusters: list[int] = []  # For n8n output
+    similarities: list[float] = []  # For n8n output
 
 @app.post("/analyze-viral")
 def analyze_viral(request: ContentRequest):
-    # Call python_script.py to analyze with scrape_analyze
+    # Call python_script.py with ContentStudio trends (placeholder API)
     input_data = {
         "action": "scrape_analyze",
-        "urls": ["https://api.x.com/2/tweets/search/recent?query=AI%20automation"],  # Placeholder, replace with dynamic URLs
+        "urls": ["https://api.contentstudio.io/v1/trends?query=AI"],  # Replace with actual ContentStudio API endpoint
         "my_content": request.content,
         "n_clusters": 3
     }
@@ -32,13 +32,13 @@ def analyze_viral(request: ContentRequest):
     )
     analysis = json.loads(result.stdout) if result.returncode == 0 else {"error": "Analysis failed"}
     return {
-        "trends": [item["text"] for item in analysis if isinstance(analysis, list)],
+        "trends": analysis.get("trends", []),  # Adjust based on python_script.py output
         "content_gaps": [f"Cluster {c}" for c in set(request.clusters) if c != 0]
     }
 
 @app.post("/optimize-structure")
 def optimize_structure(request: ContentRequest):
-    prompt = f"Optimize {request.content} with trends {', '.join(request.clusters)} and insights {request.insights}"
+    prompt = f"Optimize {request.content} with trends {', '.join(map(str, request.clusters))} and insights {request.insights}"
     input_data = {"action": "generate_content", "prompt": prompt}
     result = subprocess.run(
         ["python3", "python_script.py"],
@@ -51,7 +51,6 @@ def optimize_structure(request: ContentRequest):
 
 @app.post("/recommend-hashtags")
 def recommend_hashtags(request: ContentRequest):
-    # Simple logic based on clusters, enhance with LLM if needed
     return {"hashtags": [f"#{trend.split()[0]}" for trend in request.clusters] or ["#AI", "#Automation", "#Workflows"]}
 
 @app.post("/finalize-content")
