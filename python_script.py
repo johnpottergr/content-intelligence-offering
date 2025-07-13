@@ -34,6 +34,7 @@ def cluster_embeddings(embeddings, n_clusters):
 def compute_similarity(embedding1, embedding2):
     return cosine_similarity([embedding1], [embedding2])[0][0]
 
+
 # Content Intelligence Actions
 def scrape_analyze(urls, my_content, n_clusters):
     api_key = os.getenv("CONTENTSTUDIO_API_KEY", "your_api_key_here")  # Set in n8n or env
@@ -42,32 +43,47 @@ def scrape_analyze(urls, my_content, n_clusters):
     embeddings = [extract_keywords_and_embeddings(t)[1] for t in texts if t]
     if len(embeddings) >= 2:
         n_clusters = min(max(2, len(embeddings) // 2), 10)  # Dynamic clustering
-        labels, _ = cluster_embeddings(np.array(embeddings), n_clusters)
+        labels, kmeans = cluster_embeddings(np.array(embeddings), n_clusters)  # Keep kmeans for centroids
+        centroids = kmeans.cluster_centers_  # Get the average embedding for each cluster
+        
+        # Identify gap clusters (where my_content has little representation)
+        gap_clusters = []
+        my_content_labels = labels[len(trends):] if my_content else []
+        for cluster_id in range(n_clusters):
+            if sum(1 for label in my_content_labels if label == cluster_id) < 1:  # If no my_content in cluster
+                gap_clusters.append(cluster_id)
+        gap_centroids = [centroids[i] for i in gap_clusters]  # Centroids of gap clusters
+        
+        # Filter trends with similarity >= 0.5 to any gap centroid
+        filtered_texts = []
+        filtered_embeddings = []
+        for i in range(len(trends)):
+            max_similarity = 0.0
+            for gap_centroid in gap_centroids:
+                similarity = compute_similarity(embeddings[i], gap_centroid)
+                max_similarity = max(max_similarity, similarity)
+            if max_similarity >= 0.5:  # Keep trend if similar enough to a gap
+                filtered_texts.append(texts[i])
+                filtered_embeddings.append(embeddings[i])
+        
+        # Update texts and embeddings with filtered trends and my_content
+        texts = filtered_texts + [my_content] if my_content else filtered_texts
+        embeddings = filtered_embeddings + [embeddings[-1]] if my_content else filtered_embeddings
+        
+        # Re-cluster with filtered data if my_content exists and data changed
+        if my_content and len(filtered_embeddings) + 1 < len(embeddings):
+            labels, _ = cluster_embeddings(np.array(embeddings), n_clusters)
+        
         results = []
         for i, (t, emb) in enumerate(zip(texts, embeddings)):
             similarity = compute_similarity(emb, embeddings[-1]) if i < len(embeddings) - 1 else 1.0
             results.append({
-                "source": "trend" if i < len(trends) else "my_content",
+                "source": "trend" if i < len(filtered_texts) else "my_content",
                 "text": t,
                 "cluster": int(labels[i]),
                 "similarity_to_my_content": float(similarity)
             })
-        gap_clusters = [i for i, label in enumerate(labels[:-1]) if sum(1 for l in labels[len(trends):] if l == label) < 1]
-        return json.dumps({"trends": trends, "gaps": [f"Cluster {c}" for c in gap_clusters], "results": results})
-    return json.dumps({"error": "Insufficient data for clustering"})
 
-# Authority Engine Actions (for Automated Authority)
-def generate_content(prompt, api_url="http://localhost:11434/api/generate"):
-    try:
-        response = requests.post(
-            api_url,
-            json={"model": "deepseek", "prompt": prompt},
-            headers={"Content-Type": "application/json"}
-        )
-        response.raise_for_status()
-        return json.dumps({"thread": response.json().get("response", f"Content idea for {prompt}")})
-    except Exception as e:
-        return json.dumps({"error": f"LLM generation failed: {e}"})
 
 # Main Execution
 def main():
@@ -77,12 +93,9 @@ def main():
         urls = input_data.get("urls", [])
         my_content = input_data.get("my_content", "")
         n_clusters = input_data.get("n_clusters", 3)
-        prompt = input_data.get("prompt", "")
 
         if action == "scrape_analyze":
             return scrape_analyze(urls, my_content, n_clusters)
-        elif action == "generate_content":
-            return generate_content(prompt)
         else:
             return json.dumps({"error": "Invalid action"})
     except Exception as e:
