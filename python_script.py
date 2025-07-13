@@ -1,5 +1,4 @@
 import requests
-from bs4 import BeautifulSoup
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity
@@ -16,15 +15,15 @@ def fetch_contentstudio_trends(url, api_key):
         response = requests.get(url, timeout=30, headers=headers)
         response.raise_for_status()
         data = response.json().get("data", [])
-        return [item.get("title", "trend") for item in data]  # Adjust based on ContentStudio API response
+        return [item.get("title", "trend") for item in data]  # Adjust based on ContentStudio API
     except Exception as e:
         print(f"Error fetching trends: {e}", file=sys.stderr)
         return ["trend1", "trend2"]  # Fallback
 
 def extract_keywords_and_embeddings(text, model_name='all-MiniLM-L6-v2', top_n=10):
     model = SentenceTransformer(model_name)
-    keywords = model.encode([text], convert_to_tensor=True)  # Simplified for embeddings
-    embedding = model.encode([text])[0]  # Get single embedding
+    keywords = model.encode([text], convert_to_tensor=True)  # For keyword extraction
+    embedding = model.encode([text])[0]  # Single embedding
     return keywords, embedding
 
 def cluster_embeddings(embeddings, n_clusters):
@@ -53,12 +52,11 @@ def scrape_analyze(urls, my_content, n_clusters):
                 "cluster": int(labels[i]),
                 "similarity_to_my_content": float(similarity)
             })
-        # Identify gaps: clusters with few my_content points
         gap_clusters = [i for i, label in enumerate(labels[:-1]) if sum(1 for l in labels[len(trends):] if l == label) < 1]
-        return json.dumps({"trends": trends, "gaps": [f"Cluster {c}" for c in gap_clusters]})
+        return json.dumps({"trends": trends, "gaps": [f"Cluster {c}" for c in gap_clusters], "results": results})
     return json.dumps({"error": "Insufficient data for clustering"})
 
-# Authority Engine Actions
+# Authority Engine Actions (for Automated Authority)
 def generate_content(prompt, api_url="http://localhost:11434/api/generate"):
     try:
         response = requests.post(
